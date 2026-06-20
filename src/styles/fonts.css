@@ -1,0 +1,14 @@
+/* Display digits: Bitcount (Google Fonts) — a true pixel-grid variable font.
+   Its "." glyph is real grid dots, so the number needs no manual separator.
+   Pixel shape is controlled by the ELSH axis, fill by ELXP, via
+   font-variation-settings on the display.
+   Labels / logo type: PP Supply Mono (local file in /fonts). */
+@import url('https://fonts.googleapis.com/css2?family=Bitcount:CRSV,ELSH,ELXP,slnt,wght@0..1,0..100,0..100,-8..0,100..900&display=swap');
+
+@font-face {
+  font-family: 'PP Supply Mono';
+  src: url('../../fonts/PPSupplyMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
