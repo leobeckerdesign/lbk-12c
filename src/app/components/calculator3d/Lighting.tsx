@@ -1,41 +1,45 @@
-import { Environment, Lightformer, ContactShadows } from "@react-three/drei";
+import { useEffect, useRef } from "react";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+import * as THREE from "three";
+
+// Required once so RectAreaLight (the soft-boxes) render correctly.
+RectAreaLightUniformsLib.init();
 
 /**
- * Soft top-down studio lighting that matches the reference render:
- * a key light from above-front, gentle fill, a procedural Lightformer
- * environment for PBR reflections (no HDRI download), and a contact
- * shadow under the device so it sits on the surface.
+ * Soft two-light studio, like the reference render:
+ * - KEY: big warm soft-box from the upper-LEFT (lateral, gives form + gradient).
+ * - FILL: cooler, weaker soft-box from the opposite side (right) to open up the
+ *   shadow side so nothing goes harsh/black — the soft look.
+ * Depth from the key/fill gradient + N8AO + contact shadow.
  */
 export function Lighting() {
+  const key = useRef<THREE.RectAreaLight>(null);
+  const fill = useRef<THREE.RectAreaLight>(null);
+  useEffect(() => {
+    key.current?.lookAt(0, 0, 0);
+    fill.current?.lookAt(0, 0, 0);
+  }, []);
+
   return (
     <>
-      <ambientLight intensity={0.3} />
-      <directionalLight
-        position={[2.5, 9, 4]}
-        intensity={1.45}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.02}
-      >
-        <orthographicCamera attach="shadow-camera" args={[-5, 5, 5, -5, 0.1, 30]} />
-      </directionalLight>
+      {/* KEY — upper-left, warm */}
+      <rectAreaLight
+        ref={key}
+        position={[-12, 8, -3]}
+        width={26}
+        height={18}
+        intensity={2.6}
+        color="#fff4e6"
+      />
 
-      <Environment resolution={256} frames={1}>
-        <Lightformer intensity={0.95} position={[0, 6, 3]} scale={[10, 10, 1]} />
-        <Lightformer intensity={0.55} position={[-5, 4, 4]} scale={[5, 8, 1]} />
-        <Lightformer intensity={0.5} position={[5, 4, -2]} scale={[5, 8, 1]} />
-        <Lightformer intensity={0.35} position={[0, 3, -6]} scale={[10, 5, 1]} />
-      </Environment>
-
-      <ContactShadows
-        position={[0, -0.3, 0.1]}
-        opacity={0.6}
-        scale={11}
-        blur={2.6}
-        far={2.5}
-        resolution={1024}
-        color="#04100c"
+      {/* FILL — opposite side (right), cooler + softer, ~half the key */}
+      <rectAreaLight
+        ref={fill}
+        position={[12, 5, 5]}
+        width={24}
+        height={16}
+        intensity={1.25}
+        color="#e9f1ff"
       />
     </>
   );

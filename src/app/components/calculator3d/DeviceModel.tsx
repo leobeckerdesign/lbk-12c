@@ -7,8 +7,8 @@ import { surface, MAT } from "./materials";
 import { useCalculator } from "./CalculatorContext";
 import { clickKey, clickButton, clickKnob } from "./useClickFeedback";
 import type { Service } from "../calculator/pricing";
+import type { Layout } from "./layout";
 
-export const DEV = { w: 4.3, d: 4.7, t: 0.55 } as const;
 const FONT = "/fonts/PPSupplyMono-Regular.ttf";
 
 function setCursor(v: "pointer" | "auto") {
@@ -74,22 +74,12 @@ function Label({
   );
 }
 
-function Led({
-  position,
-  on,
-  color = MAT.led,
-  r = 0.045,
-}: {
-  position: [number, number, number];
-  on: boolean;
-  color?: string;
-  r?: number;
-}) {
+function Led({ position, on, r = 0.045 }: { position: [number, number, number]; on: boolean; r?: number }) {
   return (
     <Cylinder args={[r, r, 0.03, 20]} position={position}>
       <meshStandardMaterial
-        color={on ? color : "#0c2b26"}
-        emissive={on ? color : "#000000"}
+        color={on ? MAT.led : "#0c2b26"}
+        emissive={on ? MAT.led : "#000000"}
         emissiveIntensity={on ? 2.6 : 0}
         roughness={0.5}
       />
@@ -98,27 +88,25 @@ function Led({
 }
 
 // ---- screen -------------------------------------------------------------------
-function Screen() {
-  const z = -1.28;
+function Screen({ L, face }: { L: Layout; face: number }) {
   const { flash } = useCalculator();
-  const { glow } = useSpring({ glow: flash ? 0.38 : 0, config: { tension: 220, friction: 16 } });
+  const { glow } = useSpring({ glow: flash ? 0.4 : 0, config: { tension: 220, friction: 16 } });
+  const top = face + 0.04;
   return (
     <group>
-      {/* raised bezel frame */}
-      <RoundedBox args={[3.98, 0.22, 1.9]} radius={0.1} smoothness={8} position={[0, 0.26, z]} castShadow receiveShadow>
-        <Plastic color={MAT.bodyDark} repeat={5} clear={0.15} />
+      <RoundedBox args={[L.scrW + 0.28, 0.22, L.scrD + 0.28]} radius={0.1} smoothness={8} position={[0, face + 0.02, L.scrZ]} castShadow receiveShadow>
+        <Plastic color={MAT.bodyDark} repeat={5} clear={0.14} />
       </RoundedBox>
-      {/* recessed glass, sunk below the bezel lip */}
-      <RoundedBox args={[3.6, 0.18, 1.54]} radius={0.045} smoothness={8} position={[0, 0.24, z]} receiveShadow>
+      <RoundedBox args={[L.scrW, 0.18, L.scrD]} radius={0.045} smoothness={8} position={[0, top - 0.04, L.scrZ]} receiveShadow>
         <animated.meshPhysicalMaterial
-          color={MAT.screen}
+          color="#08201b"
           emissive={MAT.orange}
           emissiveIntensity={glow}
-          roughness={0.22}
+          roughness={0.45}
           metalness={0}
-          clearcoat={0.8}
-          clearcoatRoughness={0.18}
-          envMapIntensity={0.9}
+          clearcoat={0.35}
+          clearcoatRoughness={0.32}
+          envMapIntensity={0.3}
         />
       </RoundedBox>
     </group>
@@ -126,27 +114,24 @@ function Screen() {
 }
 
 // ---- service key --------------------------------------------------------------
-function ServiceKey({ service, label, x }: { service: Service; label: string; x: number }) {
+function ServiceKey({ service, label, x, L, face }: { service: Service; label: string; x: number; L: Layout; face: number }) {
   const { isActive, toggleService } = useCalculator();
   const active = isActive(service);
   const [{ y }, api] = useSpring(() => ({ y: 0, config: { tension: 700, friction: 22 } }));
 
-  const down = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    clickKey();
-    api.start({ y: -0.06 });
-  };
-  const up = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    api.start({ y: 0 });
-    toggleService(service);
-  };
-
   return (
     <group
-      position={[x, 0, -0.12]}
-      onPointerDown={down}
-      onPointerUp={up}
+      position={[x, 0, L.keyZ]}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        clickKey();
+        api.start({ y: -0.06 });
+      }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        api.start({ y: 0 });
+        toggleService(service);
+      }}
       onPointerOver={(e) => {
         e.stopPropagation();
         setCursor("pointer");
@@ -156,15 +141,14 @@ function ServiceKey({ service, label, x }: { service: Service; label: string; x:
         api.start({ y: 0 });
       }}
     >
-      {/* recessed well */}
-      <RoundedBox args={[1.2, 0.12, 0.56]} radius={0.05} smoothness={6} position={[0, 0.2, 0]} receiveShadow>
+      <RoundedBox args={[L.keyW + 0.06, 0.12, L.keyD + 0.06]} radius={0.05} smoothness={6} position={[0, face - 0.04, 0]} receiveShadow>
         <Plastic color={MAT.bodyDark} repeat={3} clear={0.1} />
       </RoundedBox>
       <animated.group position-y={y}>
-        <RoundedBox args={[1.08, 0.26, 0.44]} radius={0.07} smoothness={8} position={[0, 0.31, 0]} castShadow receiveShadow>
+        <RoundedBox args={[L.keyW, 0.26, L.keyD]} radius={0.07} smoothness={8} position={[0, face + 0.07, 0]} castShadow receiveShadow>
           <Plastic color={MAT.keycap} repeat={3} clear={0.26} />
         </RoundedBox>
-        <RoundedBox args={[0.8, 0.09, 0.1]} radius={0.03} smoothness={4} position={[0, 0.4, 0.1]}>
+        <RoundedBox args={[L.keyW * 0.7, 0.09, 0.1]} radius={0.03} smoothness={4} position={[0, face + 0.16, L.keyD * 0.22]}>
           <meshStandardMaterial
             color={active ? MAT.led : "#39342a"}
             emissive={active ? MAT.led : "#000000"}
@@ -172,7 +156,7 @@ function ServiceKey({ service, label, x }: { service: Service; label: string; x:
             roughness={0.6}
           />
         </RoundedBox>
-        <Label position={[0, 0.45, -0.08]} size={0.1}>
+        <Label position={[0, face + 0.21, -L.keyD * 0.16]} size={0.1}>
           {label}
         </Label>
       </animated.group>
@@ -180,47 +164,66 @@ function ServiceKey({ service, label, x }: { service: Service; label: string; x:
   );
 }
 
-// ---- knob ---------------------------------------------------------------------
-function Knob({
+// ---- knob cell ----------------------------------------------------------------
+function KnobCell({
   label,
   value,
   x,
   pos,
   onCycle,
+  L,
+  face,
 }: {
   label: string;
   value: string;
   x: number;
   pos: 0 | 1 | 2;
   onCycle: () => void;
+  L: Layout;
+  face: number;
 }) {
-  const z = 0.95;
-  // Domed knob profile revolved around Y (gives a beveled, crowned top).
+  const r = L.knobR;
+  const cw = L.knobCellW;
+  const cd = L.knobCellD;
   const profile = useMemo(
     () =>
       [
-        [0.43, 0.0],
-        [0.43, 0.3],
-        [0.42, 0.35],
-        [0.385, 0.4],
-        [0.31, 0.44],
-        [0.18, 0.465],
-        [0.0, 0.475],
+        [r, 0.0],
+        [r, 0.3],
+        [r * 0.97, 0.35],
+        [r * 0.88, 0.4],
+        [r * 0.72, 0.44],
+        [r * 0.42, 0.465],
+        [0, 0.475],
       ].map(([px, py]) => new THREE.Vector2(px, py)),
-    [],
+    [r],
   );
 
   const targetRot = pos === 0 ? 0.84 : pos === 2 ? -0.84 : 0;
   const { rot } = useSpring({ rot: targetRot, config: { tension: 320, friction: 17 } });
   const [{ s }, api] = useSpring(() => ({ s: 1, config: { tension: 700, friction: 20 } }));
 
+  const knobZ = cd * 0.06;
+  const ledY = face + 0.13;
+  const ledZ = knobZ - r - 0.16;
+
   return (
-    <group position={[x, 0, z]}>
-      <Led position={[-0.5, 0.36, -0.42]} on={pos === 0} />
-      <Led position={[0, 0.36, -0.56]} on={pos === 1} />
-      <Led position={[0.5, 0.36, -0.42]} on={pos === 2} />
+    <group position={[x, 0, L.knobZ]}>
+      {/* raised cell panel */}
+      <RoundedBox args={[cw, 0.16, cd]} radius={0.08} smoothness={8} position={[0, face + 0.03, 0]} castShadow receiveShadow>
+        <Plastic color={MAT.keycap} repeat={4} clear={0.18} />
+      </RoundedBox>
+
+      <Label position={[0, face + 0.13, -cd * 0.36]} size={0.1}>
+        {label}
+      </Label>
+
+      <Led position={[-cw * 0.34, ledY, ledZ + 0.12]} on={pos === 0} />
+      <Led position={[0, ledY, ledZ]} on={pos === 1} />
+      <Led position={[cw * 0.34, ledY, ledZ + 0.12]} on={pos === 2} />
 
       <animated.group
+        position={[0, 0, knobZ]}
         rotation-y={rot}
         scale={s}
         onPointerDown={(e) => {
@@ -235,7 +238,7 @@ function Knob({
         }}
         onPointerOut={() => setCursor("auto")}
       >
-        <mesh position={[0, 0.27, 0]} castShadow receiveShadow>
+        <mesh position={[0, face + 0.05, 0]} castShadow receiveShadow>
           <latheGeometry args={[profile, 64]} />
           <meshPhysicalMaterial
             color={MAT.knob}
@@ -245,35 +248,17 @@ function Knob({
             clearcoatRoughness={0.28}
             envMapIntensity={1}
             normalMap={surface(7).normalMap}
-            normalScale={new THREE.Vector2(0.18, 0.18)}
+            normalScale={new THREE.Vector2(0.16, 0.16)}
           />
         </mesh>
-        <RoundedBox args={[0.04, 0.05, 0.22]} radius={0.015} smoothness={3} position={[0, 0.74, -0.15]}>
+        <RoundedBox args={[0.04, 0.05, r * 0.5]} radius={0.015} smoothness={3} position={[0, face + 0.52, -r * 0.4]}>
           <meshStandardMaterial color={MAT.keycap} roughness={0.5} />
         </RoundedBox>
       </animated.group>
 
-      <Label position={[0, 0.37, -0.78]} size={0.1}>
-        {label}
-      </Label>
-      <Label position={[0, 0.37, 0.56]} size={0.1}>
+      <Label position={[0, face + 0.13, cd * 0.4]} size={0.1}>
         {value}
       </Label>
-    </group>
-  );
-}
-
-function KnobPanel() {
-  const c = useCalculator();
-  return (
-    <group>
-      {/* recessed tray floor */}
-      <RoundedBox args={[3.98, 0.12, 1.7]} radius={0.1} smoothness={8} position={[0, 0.2, 0.9]} receiveShadow>
-        <Plastic color={MAT.bodyDark} repeat={5} clear={0.1} />
-      </RoundedBox>
-      <Knob label="EXPERIÊNCIA" value={c.experienceLabel} x={-1.18} pos={c.expPos} onCycle={c.cycleExp} />
-      <Knob label="CLIENTE" value={c.clientLabel} x={0} pos={c.clientPos} onCycle={c.cycleClient} />
-      <Knob label="OPORTUNIDADE" value={c.opportunityLabel} x={1.18} pos={c.oppPos} onCycle={c.cycleOpp} />
     </group>
   );
 }
@@ -284,16 +269,20 @@ function BigButton({
   x,
   orange,
   onClick,
+  L,
+  face,
 }: {
   label: string;
   x: number;
   orange?: boolean;
   onClick: () => void;
+  L: Layout;
+  face: number;
 }) {
   const [{ y }, api] = useSpring(() => ({ y: 0, config: { tension: 600, friction: 20 } }));
   return (
     <group
-      position={[x, 0, 1.86]}
+      position={[x, 0, L.btnZ]}
       onPointerDown={(e) => {
         e.stopPropagation();
         clickButton();
@@ -313,19 +302,18 @@ function BigButton({
         api.start({ y: 0 });
       }}
     >
-      {/* recessed well */}
-      <RoundedBox args={[1.84, 0.12, 0.72]} radius={0.08} smoothness={6} position={[0, 0.2, 0]} receiveShadow>
+      <RoundedBox args={[L.btnW + 0.08, 0.12, L.btnD + 0.08]} radius={0.07} smoothness={6} position={[0, face - 0.04, 0]} receiveShadow>
         <Plastic color={MAT.bodyDark} repeat={3} clear={0.1} />
       </RoundedBox>
       <animated.group position-y={y}>
-        <RoundedBox args={[1.72, 0.32, 0.6]} radius={0.09} smoothness={8} position={[0, 0.33, 0]} castShadow receiveShadow>
+        <RoundedBox args={[L.btnW, 0.32, L.btnD]} radius={0.09} smoothness={8} position={[0, face + 0.1, 0]} castShadow receiveShadow>
           {orange ? (
             <Plastic color={MAT.orange} repeat={3} clear={0.5} normal={0.35} env={0.85} />
           ) : (
             <Plastic color={MAT.keycap} repeat={3} clear={0.26} />
           )}
         </RoundedBox>
-        <Label position={[0, 0.5, 0]} size={0.17} color={orange ? "#2a1208" : MAT.ink}>
+        <Label position={[0, face + 0.27, 0]} size={0.17} color={orange ? "#2a1208" : MAT.ink}>
           {label}
         </Label>
       </animated.group>
@@ -334,31 +322,41 @@ function BigButton({
 }
 
 // ---- assembly -----------------------------------------------------------------
-const SERVICE_KEYS: { service: Service; label: string; x: number }[] = [
-  { service: "id", label: "ID", x: -1.24 },
-  { service: "lp", label: "LP", x: 0 },
-  { service: "pitchdeck", label: "PITCH DECK", x: 1.24 },
+const SERVICES: { service: Service; label: string }[] = [
+  { service: "id", label: "ID" },
+  { service: "lp", label: "LP" },
+  { service: "pitchdeck", label: "PITCH DECK" },
 ];
 
-export function DeviceModel() {
-  const { calcular, reset } = useCalculator();
+export function DeviceModel({ layout: L }: { layout: Layout }) {
+  const c = useCalculator();
+  const face = L.devT / 2;
+  const btnX = L.btnW / 2 + L.btnGap / 2;
+
+  const knobs = [
+    { label: "EXPERIÊNCIA", value: c.experienceLabel, pos: c.expPos, onCycle: c.cycleExp },
+    { label: "CLIENTE", value: c.clientLabel, pos: c.clientPos, onCycle: c.cycleClient },
+    { label: "OPORTUNIDADE", value: c.opportunityLabel, pos: c.oppPos, onCycle: c.cycleOpp },
+  ] as const;
 
   return (
     <group>
-      <RoundedBox args={[DEV.w, DEV.t, DEV.d]} radius={0.22} smoothness={12} castShadow receiveShadow>
+      <RoundedBox args={[L.devW, L.devT, L.devD]} radius={0.22} smoothness={12} castShadow receiveShadow>
         <Plastic color={MAT.body} repeat={9} clear={0.2} normal={0.6} env={0.65} />
       </RoundedBox>
 
-      <Screen />
+      <Screen L={L} face={face} />
 
-      {SERVICE_KEYS.map((k) => (
-        <ServiceKey key={k.service} {...k} />
+      {SERVICES.map((k, i) => (
+        <ServiceKey key={k.service} {...k} x={(i - 1) * L.keySpread} L={L} face={face} />
       ))}
 
-      <KnobPanel />
+      {knobs.map((k, i) => (
+        <KnobCell key={k.label} {...k} x={(i - 1) * L.knobSpread} L={L} face={face} />
+      ))}
 
-      <BigButton label="ZERAR" x={-0.92} onClick={reset} />
-      <BigButton label="CALCULAR" x={0.92} orange onClick={calcular} />
+      <BigButton label="ZERAR" x={-btnX} onClick={c.reset} L={L} face={face} />
+      <BigButton label="CALCULAR" x={btnX} orange onClick={c.calcular} L={L} face={face} />
     </group>
   );
 }
