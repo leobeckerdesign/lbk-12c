@@ -1,40 +1,40 @@
-# LBK-12C — Freelancer Pricing Calculator
+# LBK-12C, Freelancer Pricing Calculator
 
-A pricing tool for freelance designers, built as a photoreal **3D device you actually operate** — turn the knobs, punch the service buttons, and watch the dot-matrix display roll to a price. Pricing is calibrated to the Brazilian design market.
+![LBK-12C](docs/preview.png)
 
-**Live:** https://lbk-12c.leobecker.com
+Uma ferramenta de precificação para designers freelancer, construída como um **dispositivo 3D fotorrealista que você opera de verdade**: gira os knobs, aperta os botões de serviço e vê o display dot-matrix rolar até o preço. Os valores são calibrados para o mercado de design brasileiro.
 
-## What it does
+**No ar:** https://lbk-12c.leobecker.com
 
-Pick a service (**ID** · **Landing Page** · **Pitch Deck**), then dial in the client size, your seniority level, and how much you want the job. The device computes a market-calibrated price and can explain the methodology behind it.
+## O que faz
+
+Escolha um serviço (**ID**, **Landing Page** ou **Pitch Deck**), ajuste o porte do cliente, o seu nível de senioridade e o quanto você quer o trabalho. O dispositivo calcula um preço calibrado ao mercado e ainda explica a metodologia por trás.
 
 ## Stack
 
-- **Vite 6** + **React 18** + **TypeScript**
-- **React Three Fiber** (three.js) for the 3D device — with `drei`, `postprocessing` and `react-spring`
-- 3D model authored in **Blender**, shipped as a single GLB (`public/models/lbk12c.glb`)
+- **Vite 6**, **React 18** e **TypeScript**
+- **React Three Fiber** (three.js) para o dispositivo 3D, com `drei`, `postprocessing` e `react-spring`
+- Modelo 3D feito no **Blender** e exportado como um único GLB (`public/models/lbk12c.glb`). A modelagem foi dirigida direto pelo Claude via [ahujasid/blender-mcp](https://github.com/ahujasid/blender-mcp), o servidor MCP que conecta o Blender ao assistente.
 - **Tailwind CSS v4**
-- A CSS-only **2D fallback** renders automatically when WebGL isn't available
+- Um **fallback 2D** em CSS puro entra automaticamente quando o WebGL não está disponível
 
-## Run
+## Rodar
 
 ```bash
 pnpm install
 pnpm dev        # http://localhost:5173
 ```
 
-Append `?edit=1` to the URL to open the live layout editor (sliders + gizmos + orbit).
+Adicione `?edit=1` na URL para abrir o editor de layout ao vivo (sliders, gizmos e orbit).
 
 ## Build
 
 ```bash
-pnpm build      # static output in dist/
+pnpm build      # saída estática em dist/
 ```
 
 ## Deploy
 
-Containerized with a multi-stage **Dockerfile** (Node build → **nginx** serving the static bundle). See `Dockerfile` and `nginx.conf`. The GLB model integration is documented in `MODEL_INTEGRATION.md`.
-
----
+Containerizado com um **Dockerfile** multi-stage (build em Node, depois **nginx** servindo o bundle estático). Veja `Dockerfile` e `nginx.conf`. A integração do modelo GLB está documentada em `MODEL_INTEGRATION.md`.
 
 © Leo Becker Media House
