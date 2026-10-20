@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { TransformControls, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { Lighting } from "./Lighting";
-import { DeviceGLB } from "./DeviceGLB";
+import { DeviceGLB, DRAG_PX } from "./DeviceGLB";
 import { CalculatorProvider } from "./CalculatorContext";
 import { Effects } from "./Effects";
 import type { Layout } from "./layout";
@@ -29,14 +29,15 @@ function FitCamera({ L }: { L: Layout }) {
 }
 
 /**
- * Right-mouse-button drag rotates the device to inspect any side. Left button
- * stays free for the knob/button interactions. Releasing springs the device
- * back to 100% front (its resting pose).
+ * Click-and-drag (left or right button, or touch) rotates the device to inspect
+ * any side. Rotation only starts past DRAG_PX, so a plain click still reaches
+ * the knobs/buttons. Releasing springs the device back to 100% front (its
+ * resting pose).
  */
 function RotateGroup({ children, enabled }: { children: React.ReactNode; enabled: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const target = useRef({ x: 0, z: 0 });
-  const drag = useRef({ on: false, x: 0, y: 0 });
+  const drag = useRef({ down: false, on: false, x0: 0, y0: 0, x: 0, y: 0 });
   const zoom = useRef(1); // scroll zoom: 1 = fit (max), 0.5 = half (min)
   const { gl } = useThree();
 
@@ -44,21 +45,31 @@ function RotateGroup({ children, enabled }: { children: React.ReactNode; enabled
     if (!enabled) return;
     const el = gl.domElement;
     const down = (e: PointerEvent) => {
-      if (e.button !== 2) return; // right button only
-      drag.current = { on: true, x: e.clientX, y: e.clientY };
+      if (e.button !== 0 && e.button !== 2) return;
+      drag.current = { down: true, on: false, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
     };
     const move = (e: PointerEvent) => {
-      if (!drag.current.on) return;
-      const dx = e.clientX - drag.current.x;
-      const dy = e.clientY - drag.current.y;
-      drag.current.x = e.clientX;
-      drag.current.y = e.clientY;
+      const d = drag.current;
+      if (!d.down) return;
+      if (!d.on) {
+        if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) <= DRAG_PX) return;
+        d.on = true;
+        el.style.cursor = "grabbing";
+      }
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      d.x = e.clientX;
+      d.y = e.clientY;
       target.current.z = THREE.MathUtils.clamp(target.current.z - dx * 0.01, -1.5, 1.5);
       target.current.x = THREE.MathUtils.clamp(target.current.x + dy * 0.01, -1.5, 1.5);
     };
     const up = () => {
-      if (!drag.current.on) return;
-      drag.current.on = false;
+      const d = drag.current;
+      if (!d.down) return;
+      d.down = false;
+      if (!d.on) return;
+      d.on = false;
+      el.style.cursor = "";
       target.current = { x: 0, z: 0 }; // spring back to 100% front at rest
     };
     const ctx = (e: Event) => e.preventDefault(); // no browser menu on right-click
@@ -70,12 +81,14 @@ function RotateGroup({ children, enabled }: { children: React.ReactNode; enabled
     el.addEventListener("wheel", wheel, { passive: false });
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
     el.addEventListener("contextmenu", ctx);
     return () => {
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("wheel", wheel);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
       el.removeEventListener("contextmenu", ctx);
     };
   }, [gl, enabled]);
@@ -185,7 +198,7 @@ export function Scene({
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.05,
       }}
-      style={{ width: "100%", height: "100%", display: "block" }}
+      style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }}
     >
       <GradientBackground />
       {!edit && <FitCamera L={layout} />}

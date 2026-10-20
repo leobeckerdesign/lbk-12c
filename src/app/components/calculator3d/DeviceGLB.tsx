@@ -14,6 +14,8 @@ useGLTF.preload(URL);
 const KNOB_ANGLES = [0.72, 0, -0.72];
 // Button press depth, in GLB units (meters) — scaled with the group.
 const PRESS_DEPTH = -0.0022;
+// Pointer travel (px) that turns a click into a rotate-drag (see RotateGroup).
+export const DRAG_PX = 5;
 
 const BTN_NAMES = ["Btn_ID", "Btn_LP", "Btn_PITCH", "Btn_ZERAR", "Btn_CALCULAR"];
 const KNOB_NAMES = ["Knob_EXP", "Knob_CLI", "Knob_OPP"];
@@ -158,13 +160,31 @@ export function DeviceGLB({ targetWidth = 4.0 }: { targetWidth?: number }) {
   });
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
-    if (e.button !== 0) return; // left button only — right drag rotates the device
+    if (e.button !== 0) return; // left button only
+    const b = namedAncestor(e.object, BTN_NAMES);
+    if (!b) return;
+    e.stopPropagation();
+    pressed.current[b] = true;
+    if (b === "Btn_ZERAR" || b === "Btn_CALCULAR") clickButton();
+    else clickKey();
+  };
+
+  const onUp = (e: ThreeEvent<PointerEvent>) => {
+    if (e.button !== 0) return; // left button only
+    pressed.current = {}; // release wherever the pointer ends (a drag may end off the button)
+  };
+
+  // Actions fire on click, not press, so a drag that starts on a control only rotates.
+  const onClick = (e: ThreeEvent<MouseEvent>) => {
+    if (e.button !== 0 || e.delta > DRAG_PX) return;
     const b = namedAncestor(e.object, BTN_NAMES);
     if (b) {
       e.stopPropagation();
-      pressed.current[b] = true;
-      if (b === "Btn_ZERAR" || b === "Btn_CALCULAR") clickButton();
-      else clickKey();
+      if (b === "Btn_ID") c.toggleService("id");
+      else if (b === "Btn_LP") c.toggleService("lp");
+      else if (b === "Btn_PITCH") c.toggleService("pitchdeck");
+      else if (b === "Btn_ZERAR") c.reset();
+      else if (b === "Btn_CALCULAR") c.calcular();
       return;
     }
     const k = namedAncestor(e.object, KNOB_NAMES);
@@ -175,19 +195,6 @@ export function DeviceGLB({ targetWidth = 4.0 }: { targetWidth?: number }) {
       else if (k === "Knob_CLI") c.cycleClient();
       else c.cycleOpp();
     }
-  };
-
-  const onUp = (e: ThreeEvent<PointerEvent>) => {
-    if (e.button !== 0) return; // left button only
-    const b = namedAncestor(e.object, BTN_NAMES);
-    if (!b) return;
-    e.stopPropagation();
-    pressed.current[b] = false;
-    if (b === "Btn_ID") c.toggleService("id");
-    else if (b === "Btn_LP") c.toggleService("lp");
-    else if (b === "Btn_PITCH") c.toggleService("pitchdeck");
-    else if (b === "Btn_ZERAR") c.reset();
-    else if (b === "Btn_CALCULAR") c.calcular();
   };
 
   const onOver = (e: ThreeEvent<PointerEvent>) => {
@@ -209,6 +216,7 @@ export function DeviceGLB({ targetWidth = 4.0 }: { targetWidth?: number }) {
         position={[-center.x, -center.y, -center.z]}
         onPointerDown={onDown}
         onPointerUp={onUp}
+        onClick={onClick}
         onPointerOver={onOver}
         onPointerOut={onOut}
       />
